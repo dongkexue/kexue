@@ -1,0 +1,158 @@
+常用用户操作命令：
+1.清屏：
+    1.clear命令
+    2.Ctrl+L
+	
+2.切换用户与退出用户：
+	1.su命令：切换命令
+	    su root:切换到管理员用户
+		su demi:切换到demi目录下
+	2.exit: 退出当前用户
+	
+3.用户密码：
+	1.passwd username: 修改某用户的密码
+	2.passwd -S username 或
+	  passwd --status username 获取某用户的密码状态
+
+盘符切换命令(cd)：
+1.cd 路径： 进入指定目录
+2.cd或cd ~： 进入家的目录
+3.cd - : 进入上一次的工作目录，连续执行，会在当前与上一次的目录之间来回切换
+4.cd -P : 如果当前的目录为软连接，则进入到源目录
+5.cd / :进入根目录
+
+显示文件和目录(ls)
+1.ls 文件名：列出文件名，若不指定文件名和目录名，则列出当前目录，展开目录。列出以及子目录的文件名
+2.ls -a :显示所有文件，包含隐藏文件
+3.ls -l :long format长格式，列出文件的类型、权限、链接数、owner、group、大小、时间、名字。
+4.ls -l demi*:列出当前目录所有以demi开头的详细内容
+5.ls -R ：递归显示目录
+6.ls -d 目录 :不展开目录，只显示目录自身，一般与-l配合使用以显示自身属性信息
+
+
+显示文件状态(stat)
+stat 文件名:显示文件的所有纤细，包含文件的大小、时间、IO block、链接数、uid、gid、以及三个时间戳
+
+创建文件(touch)
+1.touch filename:若文件不存在，则创建一个空文件；若文件存在，则更新时间戳
+2.touch -a filename:仅更新时间戳(atime,ctime)
+3.touch -m filename:仅更新时间戳(mtime,ctime)
+4.touch -c filename:若文件存在，则更新三个时间戳，若文件不存在，则不会更新(该命令不会创建文件)
+5.touch -t time filename：将时间戳更新为指定时间
+touch 123：创建文件123
+touch 123 456：同时创建123和456
+
+复制文档或目录(cp)
+1.cp :复制源 复制目的地：复制某一文件到目的地
+2.cp -i:覆盖前提示用户，若不加-i，则直接覆盖
+3.cp -r或R:递归复制目录，若复制源中包含目录必须使用递归才能复制
+cp mysql.tar.gz /app/www：复制当前目录部署包mysql.tar.gz到备份目录/app/www
+cp -r demi/ /app/www：复制文件夹demi到部署目录/app/www
+
+移动文件(mv)
+mv 文件 地址：将文件移动到指定位置
+mv file_name1 file_name2
+mv demi /app/new：把demi文件移动到/app/new目录
+mv ~/demi/ /app/new：把demi文件夹移动到/app/new目录
+
+修改文件(rename)
+1.rename 修改内容 修改目标：修改指定内容的指定部分
+2.rename -i:覆盖前提示用户，若不加-i则直接覆盖
+3.rename -f:强制覆盖
+
+删除文件或者目录(rm)
+1.rm 文件/目录:删除指定的文件或目录
+2.rm -i:删除前提示用户，若不加-i则直接删除
+3.rm -f:强制删除指定文件或目录
+4.rm -r/R:级联删除，删目录及其子目录
+rm /root/demi/123：删除目录/root/demi/下的文件123
+rm -f /root/demi/haha/：强行删除目录/root/demi/下的haha文件
+rm -rf /root/demi/*：强行删除目录/root/demi/下的所有内容
+rm -f /root/demi/*.log：删除目录/root/demi/下的所有.log文件
+rm -r /root/demi：删除demi目录
+rm -i demi.log：删除文件demi.log时二次确认
+
+创建目录(mkdir)
+1.mkdir filename:创建文档目录
+2.mkdir -p a/b/c/:连续创建多及目录
+3.mkdir -v:创建时显示过程
+4.mkdir -m 777:创建时指定权限
+mkdir demi：新建一个文件夹
+mkdir demi1 demi2 demi3：新建三个文件夹
+mkdir -p demi/demi1/demi2：创建层级目录
+
+查看系统中的进程状态(ps)
+1.ps -a:查看所有进程
+2.ps -ef|grep java:查看java的进程
+
+查询某个服务进程的PID(pidof)
+pidof java：查询java进程所有的PID
+
+终止某个服务进程(kill)
+1.kill PID:终止服务对应的PID
+2.kill -9 PID:强制杀死进程
+3.kill all:终止所有服务
+
+在线获取网络文件(wget)
+1.wget url:下载文件
+2.wget -o demo url:下载jpg文件并存储名为demo
+3.wget -b url:后台形式下载
+
+输出字符串和提取变量值(echo)
+1.echo 字符串
+2.echo $变量
+
+系统状态监测命令
+查看内存(free)
+1.free:以K为单位查看内存
+2.free -m:以M为单位查看内存
+
+显示每个文件和目录的磁盘使用空间(du)
+1.du:显示目录或者文件所占空间
+2.du -sh app.log：显示指定文件所占空间
+
+显示磁盘使用情况(df)
+
+查看系统内核和版本信息(uname -a)
+
+显示历史执行过的命令(history)
+1.history
+2.history -c:清楚历史
+3.history |grep mkdir:查看命令mkdir的历史执行记录
+
+查看系统的负载信息(uptime)
+
+查看纯文本文件(cat内容较少)(more内容较多)
+1.cat app.log:显示这个文件的内容(内容较少)
+2.more app.log:显示这个文件的内容(内容较多)
+
+查看纯文本的前n行(head)
+head -n 20 app.log
+
+查看纯文本文件的后n行(tail)
+tail -f app.log:持续刷新log
+tail -1000f app.log:实时刷新最新1000条log
+
+比较多个文本之间的差异(diff)
+diff filename1 filename2
+
+编辑文件或创建文件(vi)
+1.vi test:创建文件test(当不存在文件test时)
+2.vi a/i：进入编辑模式
+
+解压压缩与搜索命令
+对文件进行打包压缩或解压(tar)
+tar -cvf demi.tar demi：压缩一个文件demi
+tar -cvf all.tar demi1 demi2：压缩多个文件demi1,demi2
+tar -cvf demi.tar demi/：压缩文件夹demi/
+tar -cvf demi.tar *.jpg：将当前目录下所有jpg文件打包成demi.tar
+tar -cvf demi.tar.gz *.jpg：将当前目录下所有jpg文件打包成demi.tar.gz
+tar -xvf demi.tar：解压demi.tar
+tar -zxvf demi.tar.gz：解压demi.tar.gz
+
+显示目录及目录下所有文件(find)
+find /root/demi/ -type f：在/root/demi目录下的查找所有文件
+find /root/demi/ -name 123：在/root/demi目录下查找名字叫123的文件
+find .-name “*.gz”：在当前目录中查找所有扩展名为”gz”的文件
+find ./ -type f | xargs grep “demi”：在当前目录的所有普通文件中搜索demi这个词
+find ./ -size 0 | xargs rm -rf：删除文件大小为零的文件
