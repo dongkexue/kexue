@@ -1,0 +1,46 @@
+
+public class Singleton {
+	/**
+	 * 懒汉双重锁模式
+	 * 
+	 * 1.创建对象时即instance=new Singleton()对象创建在JVM中可能会进行重排序,
+	 *   在多线程访问下存在风险，使用volitile关键字修饰Singleton对象，解决该问题。
+	 *   volitile关键字可以保持当前变量多线程共享可见，一般用于修饰变量。
+	 * 
+	 * 2.双重检查模式，进行两次判断，外面是为了避免实例化后依旧进锁，提高性能。
+	 *   里面是为了进行同步，避免多线程问题，防止在多线程下进入锁后重复实例化。
+	 * 
+	 * */
+//	private volatile static Singleton instance;
+//	
+//	private Singleton(){}
+//	
+//	public static Singleton getSingleton(){
+//		if(instance == null){
+//			synchronized (Singleton.class) {
+//				if(instance == null){
+//					instance = new Singleton();
+//				}
+//			}
+//		}
+//		return instance;
+//	}
+	/**
+	 * 饿汉模式
+	 * 
+	 * 1.私有化当前对象
+	 * 2.私有化构造方法
+	 * 3.提供静态公共方法用于外部获取到当前单例对象，因为是静态的
+	 *   所以当前类本身就是属于类的，不属于对象，所以每次获取的时候只能获取到同一个对象
+	 *   即保证对象为单例。
+	 * 
+	 * */
+	private static Singleton instance = new Singleton();
+	
+	private Singleton(){}
+	
+	public static Singleton getInstance(){
+		return instance;
+	}
+	
+}
