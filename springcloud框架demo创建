@@ -1,0 +1,1234 @@
+SpringCloud基础组件demo创建
+1	Eureka注册中心
+采用Maven多Module的结构，项目结构如下：
+--springclouddemo
+ --eureka-server
+ --eureka-client
+   	 --pom.xml
+1.1	Eureka服务端搭建
+1.1.1	创建主maven工程
+删除除pom文件之外的所有文件夹，修改pom文件。
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+	
+	<!--指定springboot版本  -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.0.RELEASE</version>
+    </parent>
+   <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+        <spring-cloud.version>Greenwich.RELEASE</spring-cloud.version>
+    </properties>
+    <!--指定该项目springcloud版本信息  -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+     </dependencyManagement>
+    <modules>
+    	<module>eureka-server</module>
+    	<module>eureka-client</module>
+  	</modules>
+</project>
+
+1.1.2	创建Module工程，命名为eureka-server
+因公司无法访问外网，所以直接使用maven module创建项目，此时需注意以下几点：
+1. 工程中需手动创建文件夹src/main/resources
+2. 在resources文件夹下创建文件application.yml或application.properties文件
+3. 在resources文件夹下创建文件夹statics(用于存放静态资源如：js文件或html文件等)
+4. 在resources文件夹下创建文件夹templates(用于存放模板资源)
+此时该工程目录结构如下：
+--eureka-server
+   --src
+      --main
+         --java
+		  --com.huawei.eureka
+			--EurekaServerApplication.java
+         --resources
+		  --statics
+    		  --templates
+		  --application.yml
+      --test
+   --pom.xml
+
+注意：
+EurekaServerApplication.java文件为该springboot项目启动类，且该文件必须放在当前包的根目录下。其他业务包需在当前包之下新建业务包，即该文件与其他业务包属于同一级。
+application.yml文件为该springboot项目的配置文件，yml的数据格式和json的格式很像，都是K-V格式，通过“:”进行赋值；在yml中缩进一定不能使用TAB，否则会报很奇怪的错误，缩进只能使用空格；每个K的冒号后面都必须加一个空格；properties文件的优先级高于yml，即如果一个项目中存在着以上两种配置文件，会优先加载properties文件中的内容，如果两个文件中都配置了端口号，只有properties中的端口号有效，而yml文件中端口配置无效。
+1.1.3	修改eureka-server工程pom文件
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>springcloud</relativePath>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>eureka-server</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>eureka-server</name>
+  <packaging>jar</packaging>
+  
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+  	<!--添加eureka服务端依赖  -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+  	</dependency>
+  	<!--添加springboot基础web依赖  -->
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-web</artifactId>
+  	</dependency>
+  </dependencies>
+  <build>
+  	<plugins>
+  		<plugin>
+  			<groupId>org.springframework.boot</groupId>
+  			<artifactId>spring-boot-maven-plugin</artifactId>
+  		</plugin>
+  	</plugins>
+  </build>
+</project>
+
+1.1.4	修改application.yml文件
+#注册中心服务端口号
+server:
+  port: 8761
+#注册中心服务名称
+eureka:
+  instance:
+    hostname: 127.0.0.1
+  client:
+    #关闭#eureka服务注册，防止eureka服务自己注册自己
+    register-with-eureka: false
+    #关闭eureka注册拉取注册列表
+    fetchRegistry: false
+    #服务的注册地址
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+spring:
+  freemarker:
+    template-loader-path: classpath:/templates/
+    prefer-file-system-access: false
+
+1.1.5	修改工程启动类
+package com.huawei.eureka;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+@EnableEurekaServer //开启eureka服务端功能
+@SpringBootApplication //springboot启动类
+public class EurekaServerApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(EurekaServerApplication.class, args);
+    }
+}
+
+注意：此时需要在该类中添加@SpringBootApplication注解及@EnableEurekaServer注解，其中
+@SpringBootApplication注解为springboot项目启动类注解，查看源码可发现其中包含三个注解@SpringBootConfiguration、@EnableAutoConfiguration及@ComponentScan分别具有不同的含义：
+@SpringBootConfiguration注解：声明这是一个配置文件类相当于Spring中的Xml配置。
+@EnableAutoConfiguration注解：将所有符合自动配置条件的bean定义加载到Spring的IOC容器中。
+@ComponentScan注解：开启Spring的扫名功能，将范围内被@Component注解的类加载到容器中并生成相应的bean，可以通过basePackages等属性指定自动扫描的范围。如果不指定则默认是从被@ComponentScan注解的类所在的package进行扫描，因此SpringBoot的启动类最好放在项目的其他业务包的根目录下，这样才能保证整个项目下的所有类都在扫描范围中。
+@EnableEurekaServer注解：开启Eureka服务端功能。
+至此，Eureka服务端项目搭建完成。
+1.1.6	运行程序
+1. 启动程序类EurekaServerApplication中的main方法，启动程序。
+2. 在浏览器上访问http://127.0.0.1:8761，查看页面上的Instances currently registered with Eureka这项。此时没有任何注册的实例，即还没有任何Eureka客户端向注册中心注册服务。
+1.2	Eureka客户端搭建
+1.2.1	创建module工程
+在主maven工程下创建新的module工程，命名为eureka-client，该工程向eureka-server工程注册，为eureka-server项目客户端。
+1.2.2	修改eureka-client工程pom文件
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>springcloud</relativePath>
+  </parent>  
+  <groupId>com.huawei</groupId>
+  <artifactId>eureka-client</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>eureka-client</name>
+  <packaging>jar</packaging>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+  	<!--引入eureka客户端依赖  -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+  	</dependency>
+  	<!--引入springboot基础web组件  -->
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-web</artifactId>
+  	</dependency>
+  </dependencies>
+  <build>
+  	<plugins>
+  		<plugin>
+  			<groupId>org.springframework.boot</groupId>
+  			<artifactId>spring-boot-maven-plugin</artifactId>
+  		</plugin>
+  	</plugins>
+  </build>
+</project>
+
+1.2.3	修改application.yml文件
+#eureka客户端服务端口号
+server:
+  port: 8762
+#server:
+#  port: 8763
+#eureka服务注册地址
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:8761/eureka/
+#当前服务注册在eureka注册中心的名称
+spring:
+  application:
+    name: eureka-client
+
+1.2.4	修改工程启动类
+package com.huawei;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+
+@EnableEurekaClient //开启eureka客户端服务
+@SpringBootApplication //开启springboot服务
+public class EurekaClientApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(EurekaClientApplication.class, args);
+    }
+}
+
+其中，@EnableEurekaClient注解为开启eureka客户端功能。
+1.2.5	创建controller
+package com.huawei.controller;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+@RestController //表明该类是一个controller类是@controller和@ResponseBody注解之和
+public class TestController {
+	@Value("${server.port}") //@Value 一般用于从配置文件中获取参数
+	String port;
+	@RequestMapping("/test") //@RequestMapping 配置请求地址
+	public String home(String name){
+		return "This is "+name+"!  --- port:  "+port;
+	}
+}
+
+注意：controller包层级需和工程启动类平级。具体注解使用方式参照代码注释。
+1.2.6	运行程序
+1. 启动eureka-server程序，端口号为8761。
+2.  Eureka服务端启动后，访问http://127.0.0.1:8761查看eureka服务主页，发现无服务注册。
+3. 启动eureka-client，端口号为8762。
+4. 刷新eureka服务主页页面，此时发现页面上的Instances currently registered with Eureka选项中已经有一个实例被注册，Application为EUREKA-CLIENT，Staus为UP(在线)，端口号为8762。即eureka-client已成功向eureka-server注册。
+5. 访问http://127.0.0.1:8462/test?name=test,浏览器显示如下：
+   This is test!  ---port:  8762
+2	Feign负载均衡
+2.1	Feign客户端搭建
+2.1.1	创建module工程
+在主maven工程下创建一个module工程，命名为eureka-feign-client作为服务消费者。
+2.1.2	修改pom文件
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>eureka-feign-client</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>eureka-feign-client</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+  	<!--引入Eureka客户端依赖  -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+  	</dependency>
+  	<!--引入Feign客户端相关依赖  -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-openfeign</artifactId>
+  	</dependency>
+  	<!--引入springboot基础web组件  -->
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-web</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-test</artifactId>
+  		<scope>test</scope>
+  	</dependency>
+  </dependencies>
+</project>
+
+2.1.3	修改application.yml文件
+#当前服务注册到Eureka服务端的服务名称
+spring:
+  application:
+    name: eureka-feign-client
+#当前服务端口号
+server:
+  port: 8765
+#Eureka服务端注册地址
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+2.1.4	修改工程启动类
+package com.huawei;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+@SpringBootApplication //springboot启动类
+@EnableEurekaClient //开启Eureka客户端功能
+@EnableFeignClients //开启Feign客户端功能
+public class EurekaFeignClientApplication {
+    public static void main( String[] args ){
+    	SpringApplication.run(EurekaFeignClientApplication.class, args);
+    }
+}
+
+2.1.5	创建Feign接口
+在项目包下创建feign包，feign包下创建EurekaClientFeign接口。
+package com.huawei.feign;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.huawei.feign.config.FeignConfig;
+/*Feign客户端接口，@FeignClient表明该接口是feign客户端接口，
+ * value为当前服务需要匹配的服务名称即标明负载均衡服务的服务端名称
+ * configuration值 标明feign自定义配置类 
+*/
+@FeignClient(value="eureka-client",configuration = FeignConfig.class)
+public interface EurekaClientFeign {	
+	//该处需要注意:@RequestMapping为请求url映射地址，value中的值需和负载均衡服务端中对应接口地址相同
+	@RequestMapping(value = "/test",method = RequestMethod.GET)
+	String feignTestForEurekaClient(@RequestParam(value = "name") String name);
+}
+注意：具体注解功能及注意事项见代码注释。
+2.1.6	创建Feign配置类
+在feign包下创建config包，用于存放feign相关的配置类。在config包下创建FeignConfig类。
+package com.huawei.feign.config;
+
+import java.util.concurrent.TimeUnit;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import feign.Retryer;
+//Feign客户端配置类
+@Configuration //表明当前类为配置类
+public class FeignConfig {
+	@Bean
+	public Retryer FeignRetryer(){
+		return new Retryer.Default(100,TimeUnit.SECONDS.toMillis(1),5);
+	}
+}
+
+
+2.1.7	创建业务代码
+1.	在根包下面创建service包，service包下创建TestService类。
+package com.huawei.service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.huawei.feign.EurekaClientFeign;
+//声明该类是业务处理类
+@Service
+public class TestService {
+	@Autowired //spring注入需要做负载均衡的方法
+	EurekaClientFeign eurekaClientFeign;
+	public String feignTest(String name){
+		return eurekaClientFeign.feignTestForEurekaClient(name);
+	}
+}
+2.	在根包下创建controller包，包下创建TestController类。
+package com.huawei.controller;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import com.huawei.service.TestService;
+@RestController //表明当前类为Controller类
+public class TestController {	
+	@Autowired //Spring注入
+	TestService testService;
+	/*feign客户端使用时即该方法需要做负载均衡时，
+	 * 需要在该方法中标明请求方式、方法参数中需要使用@RequestParam注解用来注明当前参数
+	 * required=false表示不传的话，会给参数赋值为null，required=true就是必须要有
+	 * */
+	@RequestMapping(value = "/test",method = RequestMethod.GET)
+	public String test(@RequestParam(required = false) String name){
+		return testService.feignTest(name);
+	}
+}
+
+2.1.8	运行程序
+1.	启动eureka-server工程，端口号为8761。
+2.	启动两个eureka-client工程，端口号分别为8762和8763。
+3.	启动eureka-feign-client工程，端口号为8765。
+4.	在浏览器上多次访问http://127.0.0.1:8765/test?name=test会轮流显示以下内容：
+This is test!  ---port:  8762
+This is test!  ---port:  8763
+即Feign客户端实现了负载均衡的功能。
+2.2	Feign总结
+2.2.1	Feign源码实现过程
+1. 首先通过@EnableFeignClients 注解开启Feign Client 的功能。只有这个注解存在，才会在程序启动时开启对@FeignClient 注解的包扫描。
+2. 根据Feign 的规则实现接口，并在接口上面加上@FeignClient 注解。
+    3. 程序启动后，会进行包扫描，扫描所有的@FeignClient 注解的类，并将这些信息注入IoC 容器中。
+    4. 当接口的方法被调用时， 通过JDK 的代理来生成具体的RequestTemplate根对象。
+    5. 根据RequestTemplate 再生成Http 请求的Request 对象。
+    6. Request 对象交给Client 去处理。
+7. 最后Client 被封装到LoadBalanceClient 类，这个类结合Ribbon 做到了负载均衡。
+2.2.2	Feign注意事项
+1.	Feign客户端默认的配置类为FeignClientsConfiguration，重写该类中的Bean,覆盖掉默认配置的Bean,可达到自定义配置的目的。如：Feign默认的配置在请求失败后，重试次数为0，即不重试。如果需要进行重试，可自定义配置类，通过修改该Demo中的FeignConfig类进行配置。本demo中修改为重试间隔为100毫秒，最大重试时间为1秒，重试次数为5次。
+2.	Feign接口配置中，即EurekaClientFeign接口中,对应接口方法@RequestMapping中的value值必须和负载均衡服务端（即eureka-client服务）中对应的接口地址向匹配，否则feign客户端识别不到，报404。
+3	Hystrix熔断器
+3.1	在Feign上使用熔断器
+由于Feign的起步依赖中已经引入了Hystrix的依赖，所以在Feign中使用Hystrix不需要引入任何的依赖，只需要在上节项目的基础上稍作修改，不需要创建新的module工程
+3.1.1	修改application.yml文件
+#当前服务注册到Eureka服务端的服务名称
+spring:
+  application:
+    name: eureka-feign-client
+#当前服务端口号
+server:
+  port: 8765
+#Eureka服务端注册地址
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+#开启Feign客户端中的熔断机制
+feign:
+  hystrix:
+    enabled: true
+
+3.1.2	修改工程启动类
+package com.huawei;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.netflix.hystrix.EnableHystrix;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+@SpringBootApplication //springboot启动类
+@EnableEurekaClient //开启Eureka客户端功能
+@EnableFeignClients //开启Feign客户端功能
+@EnableHystrix //开启Hystrix熔断器功能
+public class EurekaFeignClientApplication {
+    public static void main( String[] args ){
+    	SpringApplication.run(EurekaFeignClientApplication.class, args);
+    }
+}
+
+
+3.1.3	修改Feign接口
+package com.huawei.feign;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.huawei.feign.config.FeignConfig;
+import com.huawei.hystrix.HiHystrix;
+/*Feign客户端接口，@FeignClient表明该接口是feign客户端接口，
+ * value为当前服务需要匹配的服务名称即标明负载均衡服务的服务端名称
+ * configuration值 标明feign自定义配置类
+ * fallback值 为熔断器处理类 即 服务降级类名称
+*/
+@FeignClient(value="eureka-client",configuration = FeignConfig.class,fallback = HiHystrix.class)
+public interface EurekaClientFeign {	
+	//该处需要注意:@RequestMapping为请求url映射地址，value中的值需和负载均衡服务端中对应接口地址相同
+	@RequestMapping(value = "/test",method = RequestMethod.GET)
+	String feignTestForEurekaClient(@RequestParam(value = "name") String name);
+}
+
+3.1.4	创建服务降级类
+在项目包下面创建hystrix包，用于存放服务降级类HiHystrix
+package com.huawei.hystrix;
+import org.springframework.stereotype.Component;
+import com.huawei.feign.EurekaClientFeign;
+//该类为服务降级处理类，即熔断器类，需实现需要做服务降级对应的接口
+@Component //注入到Ioc容器中
+public class HiHystrix implements EurekaClientFeign{
+	//该方法为服务熔断即服务降级处理方法
+	@Override
+	public String feignTestForEurekaClient(String name) {
+		return "服务降级:  This is "+name+", sorry , error!";
+	}
+}
+
+3.1.5	运行服务
+1.	启动eureka-server，端口号为8761。
+2.	启动eureka-client，端口号为8762。
+3.	启动eureka-feign-client，端口号为8765。
+4.	在浏览器上访问http://127.0.0.1:8765/test?name=test，浏览器显示如下：
+This is test!  ---port:  8762
+5.	关闭eureka-client服务，重新访问上述url,浏览器显示如下：
+服务降级: This is test, sorry , error!
+由此可见，当eureka-client服务端不可用时，eureka-feign-client进入fallback的逻辑处理类即HiHystrix类，有服务降级类来执行熔断器打开时的处理逻辑。
+3.2	Hystrix说明
+Hystrix熔断器提供服务降级，总体设计原则如下：
+1.	防止单个服务的故障耗尽整个服务的Servlet容器（如Tomcat）的线程资源。
+2.	快速失败机制，如果某个服务出现了故障，则调用该服务的请求快速失败，而不是线程等待。
+3.	提供回退(fallback)方案,在请求发生故障时，提供设定好的回退方案。
+4.	使用熔断机制，防止故障扩散到其他服务。
+4	Zuul网关
+4.1	Zuul网关服务搭建
+4.1.1	创建module工程
+在主maven工程下创建module工程，命名为eureka-zuul-client。
+4.1.2	修改pom文件
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>eureka-zuul-client</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>eureka-zuul-client</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+  	<!-- 引入eureka客户端依赖 -->
+    <dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+  	</dependency>
+  	<!-- 引入springboot中的web组件 -->
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-web</artifactId>
+  	</dependency>
+  	<!-- 引入zuul网关依赖 -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-netflix-zuul</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-test</artifactId>
+  		<scope>test</scope>
+  	</dependency>
+  </dependencies>
+</project>
+
+
+4.1.3	修改application.yml文件
+#当前服务名称
+spring:
+  application:
+    name: eureka-zuul
+#网关服务端口号
+server:
+  port: 5000
+#eureka服务注册地址
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+#配置zuul网关做负载均衡                            
+zuul:
+  routes:
+    #各个服务实例及对应的请求路径
+    testapi:
+      path: /testapi/**
+      serviceId: eureka-client
+    feignapi:
+      path: /feignapi/**
+      serviceId: eureka-feign-client
+
+
+在本例中，zuul.routes.hiapi.path为“/testapi/**”，zuul.routes.hiapi.serviceId为“eureka-client”，这两个配置就可以将以“/testapi”开头的Url路由到eureka-client服务。其中zuul.routes.testapi中的“testapi”是自己定义的，需要指定它的path和serviceId,两者配合使用，就可以将指定类型的请求Url路由到指定的ServiceId。同理，满足以“/feignapi/”开头的请求Url都会分发到eureka-feign-client服务。如果服务存在多个实例，Zuul结合Ribbon会做负载均衡，将请求均分的部分路由到不同的服务实例。
+4.1.4	修改工程启动类
+package com.huawei.zuul;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
+@SpringBootApplication //springboot启动类
+@EnableEurekaClient //开启eureka客户端服务
+@EnableZuulProxy  //开启zuul功能
+public class EurekaZuulClientApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(EurekaZuulClientApplication.class, args);
+    }
+}
+
+4.1.5	运行程序
+1.	启动工程eureka-server，端口号8761。
+2.	启动两个工程eureka-client，端口号分别为8762,8763。
+3.	启动工程eureka-feign-client，端口号为8765。
+4.	启动工程eureka-zuul-client，端口号为5000。
+5.	在浏览器上多次访问http://127.0.0.1:5000/testapi/test?name=test，浏览器交替显示如下内容：
+This is test!  ---port:  8762
+This is test!  ---port:  8763
+		即Zuul在路由转发时做了负载均衡
+4.2	Zuul配置API接口版本号
+在配置文件中添加zuul.prefix配置，即修改application.yml文件为：
+#当前服务名称
+spring:
+  application:
+    name: eureka-zuul
+#网关服务端口号
+server:
+  port: 5000
+#eureka服务注册地址
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+#配置zuul网关做负载均衡                            
+zuul:
+  routes:
+    #各个服务实例及对应的请求路径
+    hiapi:
+      path: /hiapi/**
+      serviceId: eureka-client
+    ribbonapi:
+      path: /ribbonapi/**
+      serviceId: eureka-ribbon-client
+    feignapi:
+      path: /feignapi/**
+      serviceId: eureka-feign-client
+  #zuul网关配置API接口版本号
+  prefix: /v1
+
+重新启动eureka-zuul-client服务，浏览器上访问http://127.0.0.1:5000/v1/testapi/test?name=test，浏览器显示：
+This is test!  ---port:  8762
+This is test!  ---port:  8763
+4.3	Zuul配置熔断器
+在Zuul中实现熔断功能需要实现ZuulFallbackProvider接口，实现该接口两个方法：getRoute()用于指定熔断功能应用于哪些路由的服务；fallbackResponse()为进入熔断功能时执行的逻辑。
+在项目包下创建hystrix包，包中创建ZuulHystrix类用作Zuul服务降级类。
+package com.huawei.zuul.hystrix;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import org.springframework.cloud.netflix.zuul.filters.route.FallbackProvider;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.stereotype.Component;
+//配置熔断器
+//需实现FallbackProvider接口
+@Component
+public class ZuulHystrix implements FallbackProvider{
+
+	@Override //指明拦截你需要降级的服务服务名，若需要所有调用支持回退，则return "*"或者return null
+	public String getRoute() {
+		return "*";
+	}
+	
+	@Override //定制返回内容即进入熔断功能时执行的逻辑
+	public ClientHttpResponse fallbackResponse(String route, Throwable cause) {
+		return new ClientHttpResponse() {
+			
+			@Override
+			public HttpHeaders getHeaders() {
+				HttpHeaders headers = new HttpHeaders();
+				headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+				return headers;
+			}
+			
+			@Override
+			public InputStream getBody() throws IOException {
+				return new ByteArrayInputStream("oooops!error,I'm the fallback.".getBytes());
+			}
+			
+			@Override
+			public String getStatusText() throws IOException {
+				return "OK";
+			}
+			
+			@Override
+			public HttpStatus getStatusCode() throws IOException {
+				return HttpStatus.OK;
+			}
+			
+			@Override
+			public int getRawStatusCode() throws IOException {
+				return 200;
+			}
+			
+			@Override
+			public void close() {
+			}
+		};
+	}
+}
+
+
+重新启动eureka-zuul-client工程，关闭eureka-client所有实例，在浏览器访问http://127.0.0.1:5000/testapi/test?name=test，浏览器显示：
+  oooops!error,I'm the fallback.
+4.4	Zuul配置过滤器
+在Zuul中使用过滤器只需要自定义一个过滤器，继承ZuulFilter并实现ZuulFilter中的抽象方法。
+本例中业务场景为检查请求的参数中是否传了token这个参数，若没有传，则请求不被路由到具体的服务实例，直接返回响应，状态码为401。
+
+package com.huawei.zuul.filter;
+import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
+import org.springframework.stereotype.Component;
+import com.netflix.zuul.ZuulFilter;
+import com.netflix.zuul.context.RequestContext;
+import com.netflix.zuul.exception.ZuulException;
+// 网关过滤器
+//检测请求参数中是否传了token这个参数，若没传则请求不被路由到具体的服务实例，直接返回响应，状态码为401
+@Component
+public class MyZuulFilter extends ZuulFilter{
+	private static Logger log = LoggerFactory.getLogger(MyZuulFilter.class);
+	//过滤的具体逻辑
+	@Override
+	public Object run() throws ZuulException {
+		RequestContext ctx = RequestContext.getCurrentContext();
+		HttpServletRequest request = ctx.getRequest();
+		Object accessToken = request.getParameter("token");
+		if(accessToken == null){
+			log.warn("token is empty!");
+			ctx.setSendZuulResponse(false);
+			ctx.setResponseStatusCode(401);
+			try {
+				ctx.getResponse().getWriter().write("token is empty!");
+			} catch (IOException e) {
+				return null;
+			}
+		}
+		log.info("ok");
+		return null;
+	}
+	//表示该过滤器是否过滤逻辑，若为true则执行run()方法，若为false则不执行run()方法
+	@Override
+	public boolean shouldFilter() {
+		return true;
+	}
+	//过滤顺序，值越小越早执行该过滤器
+	@Override
+	public int filterOrder() {
+		return 0;
+	}
+	/* Zuul过滤器类型共四种：pre,post,routing,error
+	 * pre:在请求路由到具体服务之前执行，这种类型的过滤器可以用作安全验证，比如身份验证、参数验证等
+	 * routing:用于将请求路由到具体的微服务实例
+	 * post:请求已经被路由到微服务之后执行，用作收集统计信息、指标，以及将响应传输到客户端
+	 * error:在其他过滤器发生错误时执行
+	 * */
+	@Override
+	public String filterType() {
+		return FilterConstants.PRE_TYPE;
+	}
+}
+
+结合上节内容，重新启动eureka-client服务，端口号为8761。启动eureka-zuul-client服务，打开浏览器访问http://127.0.0.1:5000/testapi/test?name=test，浏览器显示：
+token is empty!
+访问http://127.0.0.1:5000/testapi/test?name=test&token=ok，即添加token请求参数，浏览器显示：
+This is test!  ---port:  8762
+可见，MyZuulFilter这个Bean注入到了Ioc容器中，对请求进行了过滤，并在请求路由转发之前进行了逻辑判断。实际开发中，一般用作安全验证等。
+5	Config配置中心
+5.1	Config服务端搭建
+5.1.1	创建module工程
+在主maven工程下创建module工程，命名为config-server。
+5.1.2	修改pom文件
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>config-server</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>config-server</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+  	<!--引入cloud中的config服务组件  -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-config-server</artifactId>
+  	</dependency>
+  	<!--引入eureka客户端依赖  -->
+  	<dependency>
+		<groupId>org.springframework.cloud</groupId>
+		<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+	</dependency>
+  </dependencies>
+</project>
+
+
+5.1.3	修改application.yml文件
+1.	从本地读取配置文件
+### 从本地读取配置文件
+#配置中心端口号
+server:
+  port: 8769
+spring:
+  #当前服务在注册中心的名称
+  application:
+    name: config-server
+  #配置方式
+  profiles:
+    active: native
+  #本地配置文件存放路径
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/config
+#服务注册中心路径
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://127.0.0.1:8761/eureka/
+
+2.	从git上读取配置文件
+##从git上读取配置文件
+server:
+  port: 8769
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git: 
+        searchpaths: 
+        username: 
+        password: 
+      label: master
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://127.0.0.1:8761/eureka/
+
+5.1.4	新建配置文件
+在resources目录下创建config包，用于存放其它服务的配置文件。config包下创建config-client-dev.yml文件
+server:
+  port: 8762
+foo: foo version 1
+
+5.1.5	修改工程启动类
+package com.huawei.config;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.config.server.EnableConfigServer;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+
+@SpringBootApplication //springboot启动类
+@EnableConfigServer //开启config组件服务端功能
+@EnableEurekaClient //开启eureka客户端功能
+public class ConfigServerApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(ConfigServerApplication.class, args);
+    }
+}
+
+5.2	Config客户端搭建
+5.2.1	创建module工程
+在主maven工程下创建module工程，命名为config-client。
+5.2.2	修改pom文件
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>config-client</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>config-client</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+    <!--Spring Cloud Config 客户端依赖 -->
+	<dependency>
+		<groupId>org.springframework.cloud</groupId>
+		<artifactId>spring-cloud-starter-config</artifactId>
+	</dependency>
+	<!--Eureka客户端依赖  -->
+	<dependency>
+		<groupId>org.springframework.cloud</groupId>
+		<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+	</dependency>
+	<!--Springboot基础web组件  -->
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-web</artifactId>
+  	</dependency>
+  </dependencies>
+</project>
+
+
+5.2.3	修改bootstrap.yml文件
+此处需要将application.yml文件名称修改为bootstrap.yml，bootstrap.yml文件比application.yml读取具有更高的优先级。即先加载配置中心客户端的配置文件，用于确认当前服务名称等基本信息，之后再去配置中心服务端config-server读取不同开发环境下的文件。该文件中没有服务端口号，需要在config-server项目中的config-client-dev.yml文件中读取。
+spring: 
+  application:
+    name: config-client #指定了配置文件的应用名
+  cloud:
+    config:
+      #向config服务端读取配置文件若不成功开启执行快速失败策略
+      fail-fast: true
+      discovery:
+        #开启配置信息发现
+        enabled: true
+        #指定配置中心的service-id
+        serviceId: config-server
+  #区分不同环境下的配置
+  profiles:
+    active: dev
+#eureka注册中心注册地址
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://127.0.0.1:8761/eureka/  
+5.2.4	修改工程启动类
+package com.huawei.config.client;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication //springboot启动类
+public class ConfigClientApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(ConfigClientApplication.class,args);
+    }
+}
+
+5.2.5	创建controller
+在项目包下创建controller包，controller包中新建ConfigClientController类。
+package com.huawei.config.client.controller;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController //表明当前类的类型为controller
+public class ConfigClientController {
+	
+	@Value("${foo}") //引用配置文件中的对应值
+	String foo;
+	
+	@RequestMapping(value = "/foo")
+	public String hi(){
+		return foo;
+	}
+}
+
+5.2.6	运行程序
+1.	启动eureka-server服务，端口号为8761。
+2.	启动config-server服务，端口号为8769。
+3.	启动config-client服务，端口号为8762。查看该项目配置文件发现并无端口号设置，此时项目启动的端口号来自配置中心对应文件的配置。即config-client-dev.yml文件中指定了端口号。
+4.	打开浏览器，访问http://127.0.0.1:8762/foo，浏览器显示：
+foo version 1
+ 可见config-client工程成功向config-server工程读取了配置文件中foo变量的值。
+5.3	Config说明
+1.	因公司网络限制（无外网权限）Spring Cloud Bus 动态刷新配置无法实现，故在此不再具体展示搭建过程。
+2.	Config配置存储方式还可以放在数据库中，本Demo不做具体演示。
+6	Consul服务注册
+6.1	下载安装Consul
+因外网权限，3ms上只找到0.7版本的Consul，下载后直接解压，windows下的consul为一个可执行文件consul.exe.在环境变量中添加path变量配置consul解压后文件夹位置。之后打开cmd执行如下命令：
+consul  --version.若无报错则consul已成功安装。
+启动consul：在cmd 终端执行如下命令 consul agent –dev  //以开发模式启动consul。Consul默认的启动端口为8500。启动成功后在浏览器访问http://127.0.0.1:8500即可显示Consul主界面。
+6.2	Consul服务提供者
+6.2.1	创建module工程
+在主maven工程下创建module工程，命名为consul-provider.
+6.2.2	修改pom文件
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>consul-provider</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>consul-provider</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+  	<!--引入consul依赖  -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+    </dependency>
+    <!--引入springboot基础web组件  -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!--引入springboot监控组件(此处注意如果不引入的话，consul页面会获取不到健康信息而报错,
+                     之后consul消费端也不能通过feign客户端发现该服务，总之，没有这玩意调用的时候会报错的)  -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+  </dependencies>
+</project>
+
+
+注意：
+consul-discovery依赖是spring cloud consul用来向consul注册和发现服务的依赖，采用REST API的方式进行通信。
+6.2.3	修改application.yml文件
+#注册中心服务端口号
+server:
+  port: 8901
+#server:
+#  port: 8902
+spring:
+  #当前服务的服务名
+  application:
+    name: consul-provider
+  #配置consul基本信息
+  cloud:
+    consul:
+      #IP
+      host: 127.0.0.1
+      #端口号
+      port: 8500
+      discovery:
+        #在consul注册中的服务名
+        serviceName: consul-provider
+
+6.2.4	修改工程启动类
+package com.huawei.consul;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication //springboot启动类
+@EnableDiscoveryClient //开启服务发现的功能
+public class ConsulProviderApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(ConsulProviderApplication.class, args);
+    }
+}
+
+6.2.5	创建controller
+package com.huawei.consul.controller;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class TestController {
+	@Value("${server.port}")
+	String port;
+	@RequestMapping("/testconsul")
+	public String testController(@RequestParam(value="name") String name){
+		return "This is "+name+",  port:"+port;
+	}
+}
+
+6.2.6	运行程序
+1.	启动consul-provider工程，端口号为8901。
+2.	浏览器访问http://127.0.0.1:8500，页面显示consul-provider已经成功注册到Consul注册中心。
+3.	测试接口，浏览器访问http://127.0.0.1:8901/testconsul?name=test，页面显示如下：
+This is test, port:8901
+6.3	Consul服务消费端
+6.3.1	创建module工程
+在主maven 工程下，创建module工程，命名为consul-consumer。
+6.3.2	修改pom文件
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.huawei</groupId>
+    <artifactId>springcloud</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.huawei</groupId>
+  <artifactId>consul-consumer</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>consul-consumer</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!--引入Feign客户端相关依赖  -->
+  	<dependency>
+  		<groupId>org.springframework.cloud</groupId>
+  		<artifactId>spring-cloud-starter-openfeign</artifactId>
+  	</dependency>
+  </dependencies>
+</project>
+
+
+6.3.3	修改application.yml文件
+#注册中心服务端口号
+server:
+  port: 8904
+spring:
+  #当前服务的服务名
+  application:
+    name: consul-consumer
+  #配置consul基本信息
+  cloud:
+    consul:
+      #IP
+      host: 127.0.0.1
+      #端口号
+      port: 8500
+      discovery:
+        #在consul注册中的服务名
+        serviceName: consul-consumer
+
+6.3.4	修改工程启动类
+package com.huawei.consul;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+@SpringBootApplication //工程启动类
+@EnableDiscoveryClient //开启服务发现功能
+@EnableFeignClients //开启Feign客户端功能
+public class ConsulConsumerApplication {
+    public static void main( String[] args ){
+        SpringApplication.run(ConsulConsumerApplication.class, args);
+    }
+}
+
+6.3.5	创建业务代码
+1.	创建controller
+package com.huawei.consul.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import com.huawei.consul.service.TestConsulService;
+
+@RestController //表明当前类的类型
+public class TestConsulController {
+	@Autowired //注入service层
+	TestConsulService consulService;
+	//接口请求地址
+	@RequestMapping(value="/test",method=RequestMethod.GET)
+	public String test(@RequestParam(required = false) String name){
+		return consulService.testConsul(name);
+	}
+}
+
+2.	创建service
+package com.huawei.consul.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.huawei.consul.feign.ConsulClientFeign;
+
+@Service  //表明当前类为service层
+public class TestConsulService {
+	
+	@Autowired //注入feign接口
+	ConsulClientFeign consulClientFeign;
+	
+	public String testConsul(String name){
+		return consulClientFeign.testConsulFeign(name);
+	}
+}
+
+6.3.6	创建Feign接口
+在根包下创建feign包，用于存放跟feign相关的文件。
+package com.huawei.consul.feign;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
+//配置feign客户端对应的服务
+@FeignClient(value = "consul-provider")
+public interface ConsulClientFeign {
+	
+	//配置当前接口对应的服务端接口
+	@RequestMapping(value = "/testconsul",method = RequestMethod.GET)
+	String testConsulFeign(@RequestParam(value= "name" ) String name);
+}
+
+6.3.7	运行程序
+1.	启动consul-provider工程，端口号为8901。
+2.	启动consul-consumer工程，端口号为8904。
+3.	在浏览器上访问http://127.0.0.1:8904/test?name=test，页面显示如下：
+This is test, port:8901
+即说明consul-consumer服务从consul获取到consul-provider服务的相关信息。
+
+7	总结
+本Demo仅针对于SpringCloud基础组件进行搭建演示，因各方面原因，无法针对所有组件进行演示。同时以下列出本demo中未演示的组件，以待后续完善。
+1.	Spring Cloud OAuth2：为微服务提供一整套安全解决方案
+2.	Hystrix Dashboard：熔断器仪表盘，用于监控熔断器的状况
+3.	Turbine：聚合多个Hystrix Dashboard
+4.	Spring Cloud Sleuth：集成Zipkin，用于服务链路追踪
+5.	Spring Boot Admin：聚合监控微服务的状况
+6.	Swagger：API接口文档组件
+7.	RabbitMQ：消息服务器，用于发送日志消息
+此外，可替换的组件如下：
+1.	Consul及Zookeeper替换Eureka
+2.	Gateway可替换Zuul
