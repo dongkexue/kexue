@@ -1,0 +1,473 @@
+package com.huawei.java8;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import org.junit.Test;
+
+
+public class RosterTest {
+    interface CheckPerson {
+        boolean test(Person p);
+    }
+
+    /**
+     * 1. eg：输出年龄大于20岁的成员
+     * 匹配符合某一特征的成员的方法
+     * 如果老板要年龄在某一区间的成员呢？接着换方法
+     */
+    public static void printPersonsOlderThan(List<Person> roster, int age) {
+        for (Person p : roster) {
+            if (p.getAge() >= age) {
+                p.printPerson();
+            }
+        }
+    }
+
+    /**
+     * 2. eg:输出年龄在14到30岁之间的成员
+     * 更全面的匹配方法
+     * 如果老板只要男性成员呢？
+     */
+    public static void printPersonsWithinAgeRange(
+            List<Person> roster, int low, int high) {
+        for (Person p : roster) {
+            if (low <= p.getAge() && p.getAge() < high) {
+                p.printPerson();
+            }
+        }
+    }
+
+    // Approach 3: Specify Search Criteria Code in a Local Class
+    // Approach 4: Specify Search Criteria Code in an Anonymous Class
+    // Approach 5: Specify Search Criteria Code with a Lambda Expression
+
+    /**
+     * 3. eg:老板又提出了各种复杂的需求，不要处女座的、只要邮箱是163的，怎么搞？
+     * 方法1：在本地类中指定搜索条件代码，通过接口方式，不同的需求对应不同的实现类，
+     *		 每次都要新建实现类，写大量的代码
+     * 方法2：在匿名类中指定搜索条件代码，不需要写各种实现，但是还要写个interface CheckPerson，
+     *       而且匿名类写起来也挺麻烦
+     * 方法3：Lambda表达式是懒人的不二之选，CheckPerson是一个只包含一个抽象方法的接口，
+     *	     比较简单，Lambda可以省略其实现
+     *
+     *本方法需要根据业务需求实现CheckPerson接口，即每个业务都需要实现不同的实现类
+     */
+    public static void printPersons(
+            List<Person> roster, CheckPerson tester) {
+        for (Person p : roster) {
+            if (tester.test(p)) {
+                p.printPerson();
+            }
+        }
+    }
+
+    /**
+     * 4. eg: 搞这么久，还得写一个接口，而且是只有一个抽象方法，还是不爽？
+     * 			你也可以使用标准的函数接口来代替接口CheckPerson，从而进一步减少所需的代码量
+     * 			java.util.function包中定义了标准的函数接口
+     * 			我们可以使用JDK8提供的 Predicate<T>接口来代替CheckPerson。
+     *			该接口包含方法boolean test(T t)
+     * 
+     * 该方法可以替换上面的CheckPerson接口，因为Predicate接口为java8新添加的函数式接口，
+     * 仅提供了一个方法test,返回值为boolean，供所有使用者使用，不用重新创建接口
+     * 
+     */
+    public static void printPersonsWithPredicate(
+            List<Person> roster, Predicate<Person> tester) {
+        for (Person p : roster) {
+            if (tester.test(p)) {
+                p.printPerson();
+            }
+        }
+    }
+
+
+    /**
+     * 5. Lambda表达式可不只是能够简化匿名类
+     * 		简化 p.printPerson(), 
+     * 		使用Consumer<T>接口的void accept(T t)方法，相当于入参的操作
+     * 
+     * Predicate和Consumer接口的test()和accept()方法都接收一个泛型参数。
+     * 不同的是test()方法进行某些逻辑判断并返回一个boolean值，
+     * 而accept()接受并改变某个对象的内部值。
+     * 
+     * Consumer为java8新添加的另外一种函数式接口，仅提供accept()方法，无返回值
+     * Consumer接口表示接受单个输入参数且无返回的操作
+     * 
+     * 在第4步基础上添加参数Consumer<T>接口类型，用于针对对象进行消费，或者说针对对象进行修改操作，
+     * 无返回，因为该方法无返回所以一般用于对对象进行修改或包装
+     */
+    public static void processPersons(
+            List<Person> roster,
+            Predicate<Person> tester,
+            Consumer<Person> block) {
+        for (Person p : roster) {
+            if (tester.test(p)) {
+                block.accept(p);
+            }
+        }
+    }
+
+    /**
+     * 6. 
+     * Function<T,R>接口，相当于输入类型，mapper定义参数，block负责方对给定的参数进行执行
+     * 
+     * Predicate<T>接口 boolean test(T t)表示对参数T或其中的属性进行判断返回一个boolean类型的值
+     * Consumer<T>接口 void accept(T t)表示接收单个输入参数无返回值的操作结果一般用于接收并改变某个对象的内部值
+     * Function<T, R>接口 R apply(T t)表示接收一个参数并产生结果的函数。其中T为参数，R为返回值类型
+     * 
+     * 
+     * 在第五步的基础上添加Function<T,R>接口，用于对参数进行处理从而返回指定格式的值
+     */
+    public static void processPersonsWithFunction(
+            List<Person> roster,
+            Predicate<Person> tester,
+            Function<Person, String> mapper,
+            Consumer<String> block) {
+        for (Person p : roster) {
+            if (tester.test(p)) {
+                String data = mapper.apply(p);
+                block.accept(data);
+            }
+        }
+    }
+
+    /**
+     * 7. eg: 使用泛型
+     * 
+     * 将第6步中的实际对象抽象为可迭代的任意对象
+     */
+    public static <X, Y> void processElements(
+            Iterable<X> source,
+            Predicate<X> tester,
+            Function<X, Y> mapper,
+            Consumer<Y> block) {
+        for (X p : source) {
+            if (tester.test(p)) {
+                Y data = mapper.apply(p);
+                block.accept(data);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        List<Person> roster = Person.createRoster();
+
+        /**
+         * 1. 输出年龄大于20岁的成员
+         */
+        System.out.println("1.年龄大于20岁的成员:");
+        printPersonsOlderThan(roster, 20);
+        System.out.println();
+		
+        /**
+         * 2. 输出年龄在14到30岁之间的成员
+         */
+        System.out.println("2.年龄在14到30岁之间的成员:");
+        printPersonsWithinAgeRange(roster, 14, 30);
+        System.out.println();
+
+        /**
+         * 3. 输出年龄在18到25岁的男性成员
+         * （在本地类中指定搜索条件）
+         * 您可以使用一个匿名类而不是一个本地类，并且不必为每个搜索声明一个新类
+         */
+        System.out.println("3.年龄在18到25岁的男性成员:");
+        class CheckPersonEligibleForSelectiveService implements CheckPerson {
+            public boolean test(Person p) {
+                return p.getGender() == Person.Sex.MALE
+                        && p.getAge() >= 18
+                        && p.getAge() <= 25;
+            }
+        }
+        // 这个其实就是通过行为参数化传递代码
+        // 直白点说这个就是将实现CheckPerson接口并完成指定业务逻辑的行为当做参数传递
+        printPersons(
+                roster, new CheckPersonEligibleForSelectiveService());
+
+        System.out.println();
+
+        /**
+		 * 3.输出年龄在18到25岁的男性成员
+		 * 
+		 * (在匿名类中指定搜索条件代码)
+		 * 相对于使用本地类，匿名类更为简单，代码更少
+		 * */
+        System.out.println("3.年龄在18到25岁的男性成员:(匿名类)");
+        printPersons(
+                roster,
+                new CheckPerson() {
+                    public boolean test(Person p) {
+                        return p.getGender() == Person.Sex.MALE
+                                && p.getAge() >= 18
+                                && p.getAge() <= 25;
+                    }
+                }
+        );
+
+        System.out.println();
+
+        /**
+		 * 3.输出年龄在18到25岁的男性成员
+		 * 
+		 * (使用lambda表达式)
+		 * 
+		 * 这里说一下lambda表达式，其实lambda表达式就是忽略它本身的接口，只关注接口内部的行为，
+		 * 所以在lambda表达式中你根本就看不到他实现的是哪个接口，只能通过调用的方法来辨别lambda表达式
+		 * 所代替的参数的是属于那种类别。
+		 * 同时，lambda表达式只关注行为本身，即参数，方法体和返回值.
+		 * 
+		 * 
+		 * */
+        System.out.println("3.年龄在18到25岁的男性成员:(Lambda表达式)");
+
+//        printPersons(
+//                roster,
+//                (Person p) -> p.getGender() == Person.Sex.MALE
+//                        && p.getAge() >= 18
+//                        && p.getAge() <= 25
+//        );
+
+        printPersons(roster, p -> p.getGender() == Person.Sex.MALE && p.getAge() >= 18 && p.getAge() <= 25);
+
+        System.out.println();
+
+        /**
+         * 4.使用Lambda的标准功能接口
+         * 	
+         * 	使用Predicate接口 boolean test()
+         * 该方法可以替换上面的CheckPerson接口，因为Predicate接口为java8新添加的函数式接口
+         * 
+         * 是不是发现该方法和上面第三步的方法只是换了个方法名，是的，所以说lambda表达式更关注的是
+         * 方法的执行行为，不体现方法名称，主要记住这点，之后可以判断什么时候应该使用lambda表达式。
+         * */
+        System.out.println("4.使用Predicate接口:");
+
+        printPersonsWithPredicate(
+                roster,
+                p -> p.getGender() == Person.Sex.MALE
+                        && p.getAge() >= 18
+                        && p.getAge() <= 25
+        );
+
+        System.out.println();
+
+        /**
+         * 5.使用Predicate<T>接口 boolean test(T t)
+         *   使用Consumer<T>接口的void accept(T t)
+         * 
+         * 在4的基础上添加了Consumer接口，用于对对象进行包装修改或者打印信息等操作
+         * 此处为输出Person对象
+         * 因为Consumer为无返回的接口所以注定该接口只是一个消费型接口
+         * */
+        System.out.println("5.使用Predicate和Consumer参数:");
+
+        processPersons(
+                roster,
+                p -> p.getGender() == Person.Sex.MALE
+                        && p.getAge() >= 18
+                        && p.getAge() <= 25,
+                p -> p.printPerson()
+        );
+
+        System.out.println();
+
+        /**
+         * 6.通过Function<T,R> 指定输出类型
+         *
+         * 	  使用Predicate<T>接口 boolean test(T t)
+         *   使用Consumer<T>接口void accept(T t)
+         *   使用Function<T,R>接口R apply(T t)
+         * 
+         * 添加Function<T,R>接口用于指定输出类型或者说是用于类型转换
+         * 
+         * */
+        System.out.println("6.使用Function,Predicate,Consumer参数:");
+
+        processPersonsWithFunction(
+                roster,
+                p -> p.getGender() == Person.Sex.MALE
+                        && p.getAge() >= 18
+                        && p.getAge() <= 25,   //对参数进行判断
+                        				   //对数据类型进行转换，此处为将Person类型转化为String类型        
+                p -> p.getEmailAddress(),  //或者说获取到对象指定格式的信息
+                email -> System.out.println(email)//对结果进行输出
+        );
+
+        System.out.println();
+
+        /**
+         * 7.使用泛型
+         * 
+         * 在第6步的基础上使用泛型
+         * 
+         * */
+        System.out.println("7.使用Function,Predicate,Consumer参数(泛型):");
+
+        /**
+         * This method invocation performs the following actions:
+         *
+         * Obtains a source of objects from the collection source. In this example, it obtains a source of Person objects from the collection roster. Notice that the collection roster, which is a collection of type List, is also an object of type Iterable.
+         * Filters objects that match the Predicate object tester. In this example, the Predicate object is a lambda expression that specifies which members would be eligible for Selective Service.
+         * Maps each filtered object to a value as specified by the Function object mapper. In this example, the Function object is a lambda expression that returns the e-mail address of a member.
+         * Performs an action on each mapped object as specified by the Consumer object block. In this example, the Consumer object is a lambda expression that prints a string, which is the e-mail address returned by the Function object.
+         */
+        processElements(
+                roster,
+                p -> p.getGender() == Person.Sex.MALE
+                        && p.getAge() >= 18
+                        && p.getAge() <= 25,
+                p -> p.getEmailAddress(),
+                email -> System.out.println(email)
+        );
+
+        System.out.println();
+
+        /**
+         * 8.使用接受lambda表达式的批量数据操作
+         * 
+         * 使用java8新添加的api采用流处理对集合进行操作，
+         * 对一下操作进行解析:
+         * 1.将list对象转化为strean对象，即通常我们说的流化
+         *   steam():把一个源数据，可以是集合，数组，I/O channel， 产生器generator 等，转化成流
+         * 2.调用filter方法传入参数为Predicate<T>即一般我们用于进行条件判断的语句进行条件过滤
+         *   filter 方法用于通过设置的条件过滤出元素
+         * 3.调用map方法传入参数为Function<T,R>即用于进行格式转化或获取对象内部指定属性,
+         * 	 map()用于映射每个元素到对应的结果。
+         * 4.forEach方法传入参数为Consumer<T>对当前流化处理的数据进行遍历
+         *   forEach()迭代流中的每个数据
+         * */
+        System.out.println("8.使用接受lambda表达式的批量数据操作:");
+
+        roster.stream()
+                .filter(
+                        p -> p.getGender() == Person.Sex.MALE
+                                && p.getAge() >= 18
+                                && p.getAge() <= 25
+                		)
+                .map(p -> p.getEmailAddress())
+                .forEach(email -> System.out.println(email));
+        System.out.println();
+
+        /**
+         *  9. 按年龄排序。Java 8 之前需要实现 Comparator 接口
+         *  接口比较器是一个功能接口。因此，可以使用lambda表达式来代替定义并创建一个实现了Comparator的类的新实例:
+         */
+        System.out.println("9.按照年龄排序:");
+        Person[] rosterAsArray = roster.toArray(new Person[roster.size()]);
+        /**
+         *  这种比较两个Person实例的出生日期的方法已经作为Person. 
+         *	comparebyage存在。你可以在lambda表达式中调用这个方法
+         */
+        Arrays.sort(rosterAsArray,
+                (a, b) -> Person.compareByAge(a, b)
+        );
+
+        for (Person person : roster) {
+            person.printPerson();
+        }
+        /**
+         * 1.stream()将roster即人员集合转化为数据流
+         * 2.sorted()对流化后的集合数据进行排序，传入参数Comparator
+         * 		调用Comparator中的静态方法comparing(Function<T,R>)
+         * 		其中(Person::getBirthday)为方法引用也就是Lambda表达式的另外一种简写
+         * 		相当于  () -> Person对象.getBirthday();
+         * 		该语句整体含义就是根据Person对象中的Birthday属性进行排序
+         * 3.collect()传入参数Collector，一般结束流化时用，用于转化为原有的集合类型
+         * */
+        List<Person> personSortAge=roster
+        		.stream()
+        		.sorted(Comparator.comparing(Person::getBirthday))
+                .collect(Collectors.toList());
+             
+        personSortAge.forEach(p -> System.out.println(p));
+        /**
+         * 流化处理时常用的方法：
+         * 1.steam():把一个源数据，可以是集合，数组，I/O channel， 产生器generator 等，转化成流。
+         * 2.forEach():迭代流中的每个数据。
+         * 3.map():用于映射每个元素到对应的结果
+         * 4.filter():filter 方法用于通过设置的条件过滤出元素
+         * 5.sorted(): 用于对流进行排序。
+         * 6.Collectors(): 类实现了很多归约操作，例如将流转换成集合和聚合元素
+         * 	  即collect()
+         * 
+         * */
+        
+        
+        /**
+         *  这种比较两个Person实例的出生日期的方法已经作为Person. comparebyage存在。
+         *  你可以在lambda表达式中调用这个方法
+         */
+
+        Arrays.sort(rosterAsArray,
+                (a, b) -> Person.compareByAge(a, b)
+        );
+
+
+
+        /**
+         *  ===================================================================
+         *  方法引用：
+         * 这个lambda表达式调用现有的方法，所以您可以使用方法引用而不是lambda表达式
+         *  Person::compareByAge 等同于 (a, b) -> Person.compareByAge(a, b)
+         */
+        Arrays.sort(rosterAsArray, Person::compareByAge);
+
+
+        System.out.println();
+
+        /**
+         * 引用特定对象的实例方法
+         * 
+         * */
+        class ComparisonProvider {
+            public int compareByName(Person a, Person b) {
+                return a.getName().compareTo(b.getName());
+            }
+
+            public int compareByAge(Person a, Person b) {
+                return a.getBirthday().compareTo(b.getBirthday());
+            }
+        }
+        ComparisonProvider myComparisonProvider = new ComparisonProvider();
+        Arrays.sort(rosterAsArray, myComparisonProvider::compareByName);
+        for (Person person : rosterAsArray) {
+            person.printPerson();
+        }
+
+        System.out.println();
+
+        /**
+         * 引用特定类型的任意对象的实例方法
+         * String::compareToIgnoreCase 格式化 (String a, String b) ，并去调用 a.compareToIgnoreCase(b)
+         */
+        String[] stringArray = { "Barbara", "James", "Mary", "John",
+                "Patricia", "Robert", "Michael", "Linda" };
+        Arrays.sort(stringArray, String::compareToIgnoreCase);
+        for (String s : stringArray) {
+            System.out.println(s);
+        }
+
+
+        System.out.println();
+
+        // 通过 stream 将计算集合的和
+        Integer[] intArray = {1, 2, 3, 4, 5, 6, 7, 8 };
+        List<Integer> listOfIntegers =
+                new ArrayList<>(Arrays.asList(intArray));
+        System.out.println("Sum of integers: " +
+                listOfIntegers
+                        .stream()
+                        .reduce(Integer::sum).get());
+
+    }
+
+}
