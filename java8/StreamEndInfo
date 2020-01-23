@@ -1,0 +1,175 @@
+package com.huawei.java8;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import org.junit.Test;
+
+/**
+ * 2.3 Stream的终止操作
+ * 
+ * 		终端操作会从流的流水线生成结果。其结果可以是任何不是流的值，例如List、Integer，甚至是void
+ * 
+ * 2.3.1 查找与匹配
+ *  
+ *  		方法							描述
+ *  	allMatch(Predicate p)		检查是否匹配所有元素
+ *  	anyMatch(Predicate p)		检查是否至少匹配一个元素
+ *  	noneMatch(Predicate p)		检查是否没有匹配所有元素
+ *  	findFirst()					返回第一个元素
+ *  	findAny()					返回当前流中的任意元素
+ *  	count()						返回流中的元素总数
+ *  	max(Comparator c)			返回流中的最大值
+ *  	min(Comparator c)			返回流中的最小值
+ *  	forEach(Consumer c)			内部迭代(使用Collection接口需要用户去做迭代，称为外部迭代。
+ *  								相反，Stream API使用内部迭代即不需要用户去实现迭代)
+ * 
+ * 
+ * */
+public class StreamEndInfo {
+	//生成多个Person对象
+	List<Person> persons = Person.createRoster();
+	
+	//终止操作
+	@Test
+	public void test(){
+		boolean bl = persons.stream()
+				.allMatch(p -> p.getGender().equals(Person.Sex.FEMALE));
+		
+		System.out.println("所有成员都为女性吗？"+bl);
+		
+		boolean bl1 = persons.stream()
+				.anyMatch(p -> p.getGender().equals(Person.Sex.FEMALE));
+		
+		System.out.println("成员中有女性吗？"+bl1);
+		
+		boolean bl2 = persons.stream()
+			.noneMatch((e) -> e.getGender().equals(Person.Sex.FEMALE));
+		
+		System.out.println("成员中是不是没有女性？"+bl2);
+		
+	}
+	
+	@Test
+	public void test1(){
+		
+		Optional<Person> op = persons.stream()
+				.sorted(Comparator.comparingInt(Person::getAge))
+				.findFirst();
+		
+		System.out.println("年龄最小的："+op.get());
+		
+		Optional<Person> op1 = persons.stream()
+				.filter(p -> p.getGender().equals(Person.Sex.MALE))
+				.findAny();
+		System.out.println("随便找个男的"+op1.get());
+		
+	}
+	
+	@Test
+	public void test2(){
+		long count =persons.stream()
+				.filter(p -> p.getGender().equals(Person.Sex.FEMALE))
+				.count();
+		
+		System.out.println("女生的人数："+count);
+		
+		Optional<Integer> op = persons.stream()
+				.map(Person::getAge)
+				.max(Integer::compare);
+		
+//		Optional<Integer> op = persons.stream()
+//				.map(p -> p.getAge())
+//				.max((x,y) -> Integer.compare(x, y));
+		
+		System.out.println("最大年龄："+op.get());
+		
+		Optional<Person> op2 = persons.stream()
+				.min((e1,e2) -> Integer.compare(e1.getAge(), e2.getAge()));
+		
+//		Optional<Person> op2 = persons.stream()
+//				.min(Comparator.comparing(Person::getAge));
+		
+		System.out.println("最小年龄成员："+op2.get());
+		
+	}
+	
+	@Test
+	public void test3(){
+		Stream<Person> stream = persons.stream()
+				.filter(p -> p.getGender().equals(Person.Sex.FEMALE));
+		
+		long count = stream.count();
+		
+		stream.map(Person::getAge)
+			.max(Integer::compare);
+		
+		
+//		stream.map(p -> p.getAge())
+//			.max((x,y) -> Integer.compare(x, y));
+		
+	}
+	
+	//3.终止操作：规约
+	@Test
+	public void test4(){
+		List<Integer> list = Arrays.asList(1,2,3,4,5,6,7,8,9,10);
+		Integer sum = list.stream()
+				.reduce(0, (x,y) -> x+y);
+		System.out.println(sum);
+		
+		System.out.println("----------------------------");
+		
+		Optional<Integer> op = persons.stream()
+				.map(Person::getAge)
+				.reduce(Integer::sum);
+		
+		System.out.println("所有成员的年龄总和："+op.get());
+		
+	}
+	//需求：搜索名字中"B"出现的次数
+	@Test
+	public void test5(){
+		/**
+		 * .stream()获取流对象
+		 * .map(Person::getName)相当于.map(p ->p.getName())在流中获取对象的姓名
+		 * .flatMap(StreamEndInfo::filterCharacter)相当于.flatMap(s ->StreamEndInfo.filterCharacter(s))
+		 * 			用于将获取到对象名称的流转化为Character类型的流
+		 * .map()用于将转化后的Character类型的流进行内部判断出现对应字符时记1，未出现则为0
+		 * .reduce(Integer::sum)相当于.reduce((a,b) -> Integer.sum(a, b))即：将
+		 * 			流中元素反复结合起来，即为规约,从而得到一个值，此时该方法用于将上面得到的流中的所有元素，
+		 * 			即记为1和0的元素进行累加即调用Integer.sum(int a,int b)方法。
+		 * 
+		 * */
+		Optional<Integer> sum = persons.stream() 
+//				.map(Person::getName)
+				.map(p ->p.getName())
+//				.flatMap(s ->StreamEndInfo.filterCharacter(s))
+				.flatMap(StreamEndInfo::filterCharacter)
+				.map(c -> {
+					if(c.equals('B')){
+						return 1;
+					}else{
+						return 0;
+					}
+				})
+//				.reduce(Integer::sum);
+				.reduce((a,b) -> Integer.sum(a, b));
+		
+		System.out.println(sum.get());
+		
+	}
+	
+	public static Stream<Character> filterCharacter(String str){
+		  List<Character> list = new ArrayList<>();
+		  for (Character ch : str.toCharArray()) {
+		    list.add(ch);
+		  }
+		  return list.stream();
+	}
+	
+}
