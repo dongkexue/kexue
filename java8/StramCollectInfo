@@ -1,0 +1,196 @@
+package com.huawei.java8;
+
+import java.util.Comparator;
+import java.util.IntSummaryStatistics;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.junit.Test;
+
+/**
+ * 2.3.3 收集
+ * 		
+ * 			方法								描述
+ * 	collect(Collector c)	将流转换为其他形式。接收一个Collector接口的实现，用于给Stream中元素做汇总的方法 
+ *  
+ *  Collectors
+ * 
+ *  Collector接口中方法的实现决定了如何对流执行收集操作(如收集到List、Set、Map)。但是Collectors实用类
+ *  提供了很多静态方法，可以方便的创建常见收集器实例，如下表：
+ *  
+ *    方法			返回类型				作用							示例
+ *  tolist			List			把流中元素收集到List		List list=list.stream()
+ *  															.collect(Collectors
+ *  																.toList());
+ *  toSet			Set				把流中元素收集到Set			Set	set=list.stream()
+ *  															.collect(Collectors
+ *  																.toSet());
+ *  toCollection	Collection		把流中元素收集到创建的集合 		Collection maps=list.stream()
+ *  															.collect(Collectors
+ *  																.toCollection(ArrayList::new));
+ *  counting		Long			计算流中元素的个数			long count=list.stream()
+ *  															.collect(Collectors
+ *  																.counting());
+ *  summingInt		Integer			对流中元素的整数属性求和		Integer sum=persons.stream()
+ *  															.collect(Collectors
+ *  																.summingInt(Person::getAge));
+ *  averagingInt	Double			计算流中元素Integer属性		double avg=list.stream()
+ *  								的平均值						.collect(Collectors
+ *  																.averagingInt(Person::getAge));
+ *  summarizingInt	IntSummary-		收集流中Integer属性		IntSummaryStatistics iss= list.stream()
+ *  				-Statistics		的统计值.如：平均值				.collect(Collectors
+ *  																.summarizingInt(Person::getAge));
+ * 	joining			String			连接流中每个字符串			String str=list.stream()
+ * 																.map(Person::getName)
+ * 																.collect(Collectors.joining());
+ *  maxBy			Optional<T>		根据比较器选择最大值			Optional max=list.stream()
+ *  															.collect(Collectors
+ *  																.maxBy(comparingInt(Person:getAge)));
+ *  minBy			Optional<T>		根据比较器选择最小值			Optional min=list.stream()
+ *  															.collect(Collectors
+ *  																.minBy(comparingInt(Person:getAge)));
+ *  reducing		规约产生的类型		从一个作为累加器的初始值开始，	int total=list.stream()
+ *  								利用BinaryOperator与流中		.collect(Collectors
+ *  								元素逐个结合，从而规约成单个值			.reducing(0,Person::getAge,Integer::sum))
+ *  collecting-		转换函数返回的类型	包裹另一个收集器，对其结果		int how=list.stream()
+ *  -AndThen						转化函数						.collect(Collectors
+ * 																	.collectingAndThen(Collectors.toList(),List::size))
+ * 	groupingBy		Map<K,List<T>>	根据某属性值对流分组，属性为K,	Map<Person.Sex,List<Person>> 
+ * 									结果为V						map=persons.stream().collect(Collectors
+ * 																	.groupingBy(Person:;getGender))
+ * 	partitioningBy	Map<Boolean		根据true或false进行分区		Map<Boolean,List<Person>>
+ * 						,List<T>>								map=persons.stream().collect(Collectors
+ * 
+ * */
+public class StramCollectInfo {
+	//生成多个Person对象
+	List<Person> persons = Person.createRoster();
+	
+	@Test
+	public void test(){
+		List<String> list = persons.stream()
+				.map(Person::getName)
+				.collect(Collectors.toList());
+		list.forEach(System.out::println);
+	}
+	@Test
+	public void test1(){
+		Optional<Integer> max = persons.stream()
+				.map(Person::getAge)
+				.collect(Collectors.maxBy(Integer::compare));
+		
+		System.out.println("最大年龄："+max.get());
+		
+		
+		Optional<Person> op = persons.stream()
+				.min(Comparator.comparingInt(Person::getAge));
+		
+		System.out.println("最小年龄的成员："+op.get());
+		
+		Integer sum = persons.stream()
+				.collect(Collectors.summingInt(Person::getAge));
+		
+		System.out.println("所有成员的年龄总和："+sum);
+		
+		IntSummaryStatistics iss=persons.stream()
+				.collect(Collectors.summarizingInt(Person::getAge));
+		
+		System.out.println("最大年龄："+iss.getMax());
+		
+	}
+	//分组
+	/**
+	 * {
+	 *	MALE=[Person [name=Fred, birthday=1980-06-20, gender=MALE, emailAddress=fred@example.com], 
+	 *		  Person [name=George, birthday=1983-08-13, gender=MALE, emailAddress=george@example.com], 
+	 *		  Person [name=Bob, birthday=2000-09-12, gender=MALE, emailAddress=bob@example.com]], 
+	 *	FEMALE=[Person [name=Jane, birthday=1990-07-15, gender=FEMALE, emailAddress=jane@example.com]]
+	 *	}
+	 * 
+	 * */
+	@Test
+	public void test2(){
+		Map<Person.Sex, List<Person>> map = persons.stream()
+				.collect(Collectors.groupingBy(Person::getGender));
+		
+		System.out.println("按性别分组："+map);
+	}
+	//多级分组
+	/**
+	 * {
+	 *	FEMALE={青年=[Person [name=Jane, birthday=1990-07-15, gender=FEMALE, emailAddress=jane@example.com]]}, 
+	 *	MALE={青年=[Person [name=Bob, birthday=2000-09-12, gender=MALE, emailAddress=bob@example.com]], 
+	 *		  中年=[Person [name=Fred, birthday=1980-06-20, gender=MALE, emailAddress=fred@example.com], 
+	 *		  Person [name=George, birthday=1983-08-13, gender=MALE, emailAddress=george@example.com]]}
+	 *	}
+	 * */
+	@Test
+	public void test3(){
+		
+		Map<Person.Sex, Map<String,List<Person>>> map = persons.stream()
+				.collect(Collectors.groupingBy(Person::getGender
+						,Collectors.groupingBy(p -> {
+					if(p.getAge()>=60){
+						return "老年";
+					}else if(p.getAge()>=35){
+						return "中年";
+					}else{
+						return "青年";
+					}
+				})));
+		
+		System.out.println(map);
+		
+	}
+	
+	//分区
+	/**
+	 * {
+	 * false=[Person [name=Fred, birthday=1980-06-20, gender=MALE, emailAddress=fred@example.com], 
+	 *		   Person [name=Jane, birthday=1990-07-15, gender=FEMALE, emailAddress=jane@example.com], 
+	 *		   Person [name=George, birthday=1983-08-13, gender=MALE, emailAddress=george@example.com], 
+	 *		   Person [name=Bob, birthday=2000-09-12, gender=MALE, emailAddress=bob@example.com]], 
+	 * true=[]
+	 * }
+	 * */
+	@Test
+	public void test4(){
+		
+		Map<Boolean, List<Person>> map = persons.stream()
+				.collect(Collectors.partitioningBy(e -> e.getAge()>=50));
+		
+		System.out.println(map);
+		
+	}
+	
+	//流中元素间添加分隔符并在前后添加标识
+	/**
+	 * 运行结果：
+	 * ----Fred,Jane,George,Bob----
+	 * */
+	@Test
+	public void test5(){
+		
+		String str = persons.stream()
+				.map(Person::getName)
+				.collect(Collectors.joining(",","----","----"));
+		System.out.println(str);
+		
+	}
+	
+	
+	//规约
+	@Test
+	public void test6(){
+		
+		Optional<Integer> sum = persons.stream()
+				.map(Person::getAge)
+				.collect(Collectors.reducing(Integer::sum));
+		
+		System.out.println(sum.get());
+		
+	}
+	
+}
