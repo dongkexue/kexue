@@ -1,0 +1,61 @@
+package com.huawei.java8;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
+import org.junit.Test;
+
+/**
+ * 2.2.2 映射
+ * 
+ * 				方法						描述
+ * 		map(Function f)				接收一个函数作为参数，该函数会被应用到每个元素上，并将其映射成一个新的元素
+ * 	mapToDouble(ToDoubleFunction f) 接收一个函数作为参数，该函数会被应用到每个元素上，产生一个新的DoubleStream
+ * 	mapToInt(ToIntFunction f)		接收一个函数作为参数，该函数会被应用到每个元素上，产生一个新的IntStream
+ * 	mapToLong(ToLongFunction f)     接收一个函数作为参数，该函数会被应用到每个元素上，产生一个新的LongStream
+ * 	flatMap(Function f)				接受一个函数作为参数，将流中的每个值都换成另一个流，然后把所有流连接成一个流
+ * 
+ * 
+ * */
+public class StreamMapInfo {
+	
+	//生成多个Person对象
+	List<Person> persons = Person.createRoster();
+	
+	/**
+	 * 映射
+	 * */
+	@Test
+	public void test7(){
+		Stream<String> str = persons.stream()
+				.map(e -> e.getName());
+		System.out.println("---------------------------------");
+		List<String> strList = Arrays.asList("aaa","bbb","ccc","ddd","eee");
+		Stream<String> stream = strList.stream().map(p -> p.toUpperCase());
+//		Stream<String> stream = strList.stream().map(String::toUpperCase);
+		stream.forEach(p -> System.out.println(p));
+//		stream.forEach(System.out::println);
+		
+		System.out.println("---------------------------------");
+		
+		Stream<Character> stream2 = strList.stream()
+				.flatMap(StreamInfo::filterCharacter);
+//		Stream<Character> stream3 = strList.stream()
+//				.flatMap(s -> StreamInfo.filterCharacter(s));
+		
+		stream2.forEach(System.out::print);
+		
+		
+		
+	} 
+	public static Stream<Character> filterCharacter(String str){
+		  List<Character> list = new ArrayList<>();
+		  for (Character ch : str.toCharArray()) {
+		    list.add(ch);
+		  }
+		  return list.stream();
+	}
+
+}
