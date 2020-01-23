@@ -1,0 +1,189 @@
+package com.huawei.java8;
+
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Month;
+import java.time.OffsetDateTime;
+import java.time.Period;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.validation.constraints.NotNull;
+
+import org.junit.Test;
+
+/**
+ * 八、新时间日期API
+ * 
+ * 
+ *  1.使用 LocalDate、LocalTime、LocalDateTime
+ *  
+ * 	  LocalDate、LocalTime、LocalDateTime类的实例是不可变的对象，分别表示使用ISO-8601
+ *    日历系统的日期、时间、日期和时间。它们提供了简单的日期或时间，并不包含当前的时间信息。
+ *    也不包含与时区相关的信息。
+ * 
+ * 	2.Instant时间戳
+ * 
+ *    用于"时间戳"的运算。它是以Unix元年(传统的设定为UTC时区1970年1月1日午夜时分)
+ *    开始所经历的秒数进行计算
+ * 
+ * 	3.Duration和Period
+ * 	
+ * 		Duration:用于计算两个"时间"间隔
+ * 		
+ * 		Period:用于计算两个"日期"间隔
+ * 	
+ * 	4.日期的操纵
+ * 
+ * 		1.通过withXXX方法修改LocalDate的属性
+ * 		2.TemporalAdjuster:时间校正器。有时我们可能需要获取例如：将日期吊证到"下个周日"等操作
+ *  	3.TemporalAdjusters:该类通过静态方法提供了大量的常用TemporalAdjuster的是实现
+ *  
+ * 	5.解析与格式化
+ * 		
+ * 		java.time.format.DateTimeFormatter类：该类提供了三种格式化方法：
+ * 			
+ * 		预定义的标准格式
+ * 		语言环境相关的格式
+ * 		自定义的格式
+ * 
+ * */
+public class DateInfo {
+	
+	/**
+	 * 使用 LocalDate、LocalTime、LocalDateTime
+	 * */
+	@Test
+	public void test(){
+		
+		LocalDate date = LocalDate.of(2020, 01, 23);
+		Month month = date.getMonth();
+		System.out.println(month);//JANUARY
+		
+		DayOfWeek dayofweek = date.getDayOfWeek();
+		System.out.println(dayofweek);//THURSDAY
+		
+		int len = date.lengthOfMonth();
+		System.out.println(len);//31
+		
+		int year = date.getYear();
+		System.out.println(year);//2020
+		
+		LocalDate ld = LocalDate.parse("2020-01-23");
+		System.out.println(ld);//2020-01-23
+		
+		LocalTime time = LocalTime.of( 9, 27, 54);
+		System.out.println(time);//09:27:54
+		
+		LocalDateTime ldt = LocalDateTime.now();
+		System.out.println(ldt);//2020-01-23T09:32:24.895
+		
+		LocalDateTime l1 = LocalDateTime.of(2020, 01, 23, 9, 30);
+		System.out.println(l1);//2020-01-23T09:30
+		
+		//当前时间基础上增加3年
+		LocalDateTime l2 = l1.plusYears(3);
+		System.out.println(l2);//2023-01-23T09:30
+		
+		//当前时间基础上减去一个月
+		LocalDateTime l3 = l1.minusMonths(1);
+		System.out.println(l3);//2019-12-23T09:30
+		System.out.println(l3.getMinute()+","+l3.getYear());//30,2019
+	}
+	
+	/**
+	 * Instant时间戳
+	 * */
+	@Test
+	public void test1(){
+		
+		Instant ins = Instant.now();//默认使用的是UTC时区
+		OffsetDateTime odt = ins.atOffset(ZoneOffset.ofHours(8));
+		
+		//2020-01-23T09:42:00.669+08:00
+		System.out.println(odt);
+		
+		//669000000
+		System.out.println(ins.getNano());
+		
+		//1970-01-01T00:00:05Z
+		Instant ins2 = Instant.ofEpochSecond(5);
+		System.out.println(ins2);
+	}
+	
+	/**
+	 *	Duration:用于计算两个“时间”间隔
+	 *
+	 *	Period:用于计算两个“日期”间隔
+	 * */
+	@Test
+	public void test2(){
+		
+		Instant ins = Instant.now();
+		try {
+			Thread.sleep(1000);
+		} catch (Exception e) {
+			
+		}
+		Instant ins1 = Instant.now();
+		System.out.println("所耗费时间为："+ Duration.between(ins, ins1).getSeconds());
+		
+		System.out.println("------------------------------");
+		LocalDate ld1 = LocalDate.now();
+		LocalDate ld2 = LocalDate.of(2019, 01, 01);
+		
+		Period pe = Period.between(ld2, ld1);
+		System.out.println(pe.getYears());//1
+		System.out.println(pe.getMonths());//0
+		System.out.println(pe.getDays());//22
+	}
+	/**
+	 * 日期的操纵
+	 * */
+	@Test
+	public void test3(){
+		LocalDate date = LocalDate.now();
+		//通过withAttributer方法修改LocalDate的属性
+		LocalDate date1 = date.with(ChronoField.ALIGNED_WEEK_OF_YEAR,9);
+		System.out.println(date1);//2020-02-27
+		
+		//2019-01-23
+		LocalDate date2 = date.withYear(2019);
+		System.out.println(date2);
+		
+		//2020-01-11
+		LocalDate date3 = date.withDayOfMonth(11);
+		System.out.println(date3);
+		
+		//2020-01-26
+		LocalDate nextSunday = LocalDate.now().with(TemporalAdjusters.next(DayOfWeek.SUNDAY));
+		System.out.println(nextSunday);
+	}
+	
+	/**
+	 * 解析与格式化
+	 * */
+	@Test
+	public void test4(){
+		
+		DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss E");
+		
+		LocalDateTime ldt = LocalDateTime.now();
+		String strDate = ldt.format(dtf);
+		//2020年01月23日 10:32:19 星期四
+		System.out.println(strDate);
+		
+		LocalDateTime newLdt = ldt.parse(strDate,dtf);
+		//2020-01-23T10:32:19
+		System.out.println(newLdt);
+		
+	}
+}
